@@ -1,31 +1,41 @@
 from flask import request, jsonify
 from modules.access_workflow.services.access_service import AccessService
+from modules.access_workflow.validators.access_validator import validate_request
 
 class AccessController:
 
     @staticmethod
-    def create():
+    def create_request():
         data = request.get_json()
-        user_id = data["user_id"]
-        resource_id = data["resource_id"]
 
-        request_obj = AccessService.create_request(user_id, resource_id)
+        if not validate_request(data):
+            return jsonify({"error": "Invalid data"}), 400
+
+        request_obj = AccessService.create_request(
+            data["user_id"],
+            data["resource_id"],
+            data["manager_id"]
+        )
 
         return jsonify({
-            "message": "Access request created",
-            "id": request_obj.id
+            "message": "Request submitted",
+            "request_id": request_obj.request_id
         }), 201
 
     @staticmethod
-    def approve(request_id):
-        admin_id = request.get_json()["admin_id"]
-        request_obj = AccessService.approve_request(request_id, admin_id)
+    def manager_approve(request_id):
+        manager_id = request.get_json()["manager_id"]
+        AccessService.manager_approve(request_id, manager_id)
+        return jsonify({"message": "Manager approved"})
 
-        return jsonify({"message": "Access approved"})
+    @staticmethod
+    def final_approve(request_id):
+        data = request.get_json()
+        AccessService.final_approve(request_id, data["approver_id"], data.get("days_valid", 7))
+        return jsonify({"message": "Access granted"})
 
     @staticmethod
     def reject(request_id):
-        admin_id = request.get_json()["admin_id"]
-        request_obj = AccessService.reject_request(request_id, admin_id)
-
-        return jsonify({"message": "Access rejected"})
+        approver_id = request.get_json()["approver_id"]
+        AccessService.reject(request_id, approver_id)
+        return jsonify({"message": "Request rejected"})
