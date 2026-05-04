@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <div class="row mb-3">
+        <div class="col-sm-6">
+            <h3 class="m-0">Audit Logs Dashboard</h3>
+        </div>
+    </div>
+
+    <div class="card">
+
+        <div class="card-header">
+            <h3 class="card-title">Enterprise Access Audit Logs</h3>
+        </div>
+
+        <div class="card-body">
+
+            <table class="table table-bordered table-hover">
+
+                <thead class="thead-dark">
+                    <tr>
+                        <th>User</th>
+                        <th>Resource</th>
+                        <th>Action</th>
+                        <th>Risk Score</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for log in logs %}
+
+                    <tr {% if log.risk_score > 50 %} class="bg-danger" {% endif %}>
+
+                        <td>{{ log.user }}</td>
+                        <td>{{ log.resource }}</td>
+                        <td>{{ log.action }}</td>
+                        <td>
+
+                            {% if log.risk_score > 50 %}
+                                <span class="badge badge-danger">{{ log.risk_score }}</span>
+                            {% else %}
+                                <span class="badge badge-success">{{ log.risk_score }}</span>
+                            {% endif %}
+
+                        </td>
+
+                        <td>{{ log.timestamp }}</td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

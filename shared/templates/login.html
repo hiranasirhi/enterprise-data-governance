@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login — Enterprise Governance Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='AdminLTE/plugins/fontawesome-free/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='AdminLTE/plugins/bootstrap/css/bootstrap.min.css') }}">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* Three.js canvas behind everything */
+        #bg-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 420px;
+            padding: 20px;
+            position: relative;
+            z-index: 10;
+        }
+        .login-card {
+            background: rgba(22, 33, 62, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            border: 1px solid rgba(168, 85, 247, 0.15);
+        }
+        .login-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .shield-icon-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+        .shield-icon-wrapper i {
+            font-size: 52px;
+            color: #a855f7;
+            display: block;
+            animation: floatShield 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.6));
+        }
+        .shield-ring {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            border: 2px solid rgba(168, 85, 247, 0.3);
+            animation: ringPulse 3s ease-in-out infinite;
+        }
+        .shield-ring-2 {
+            width: 100px; height: 100px;
+            border-color: rgba(168, 85, 247, 0.15);
+            animation-delay: 0.5s;
+        }
+        @keyframes floatShield {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        @keyframes ringPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.2; }
+        }
+        .login-logo h1 {
+            color: white;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .login-logo p { color: #888; font-size: 13px; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block;
+            color: #aaa;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        .form-group .input-wrapper { position: relative; }
+        .form-group .input-wrapper i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #555;
+            font-size: 14px;
+            z-index: 1;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px 12px 42px;
+            background: rgba(15, 52, 96, 0.8);
+            border: 1px solid #2d2d4e;
+            border-radius: 10px;
+            color: #ccc;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .form-group input:focus {
+            border-color: #a855f7;
+            color: white;
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+        }
+        .btn-login {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.3s, transform 0.2s, box-shadow 0.3s;
+            margin-top: 10px;
+            box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);
+        }
+        .btn-login:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 25px rgba(168, 85, 247, 0.5);
+        }
+        .btn-login:active { transform: translateY(0); }
+
+        .alert-error {
+            background: #3b0d0d;
+            color: #ef4444;
+            border: 1px solid #ef4444;
+            border-radius: 10px;
+            padding: 12px 15px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .portal-tag {
+            text-align: center;
+            margin-top: 25px;
+            color: #555;
+            font-size: 12px;
+        }
+        .portal-tag span { color: #a855f7; }
+
+        /* Subtle scan line overlay */
+        .scan-line {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0,0.03) 2px,
+                rgba(0,0,0,0.03) 4px
+            );
+            z-index: 1;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Three.js Background Canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Scan line overlay -->
+    <div class="scan-line"></div>
+
+    <div class="login-wrapper">
+        <div class="login-card">
+
+            <!-- Logo -->
+            <div class="login-logo">
+                <div class="shield-icon-wrapper">
+                    <div class="shield-ring"></div>
+                    <div class="shield-ring shield-ring-2"></div>
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h1>Enterprise Governance Portal</h1>
+                <p>Sign in to access the dashboard</p>
+            </div>
+
+            <!-- Error Message -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="alert-error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endwith %}
+
+            <!-- Login Form -->
+            <form method="POST" action="/auth/login">
+                <div class="form-group">
+                    <label>Username</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-user"></i>
+                        <input type="text" name="username" placeholder="Enter your username" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" name="password" placeholder="Enter your password" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-login">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+                </button>
+            </form>
+
+            <div class="portal-tag">
+                <span><i class="fas fa-lock mr-1"></i></span> Authorized Access Only
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='AdminLTE/plugins/jquery/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='AdminLTE/plugins/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+
+    <!-- Three.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // ── Three.js 3D Background ─────────────────────────────
+        const canvas = document.getElementById('bg-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
+
+        // ── Floating particles sphere ──────────────────────────
+        const particlesGeo = new THREE.BufferGeometry();
+        const count = 1800;
+        const positions = new Float32Array(count * 3);
+        const colors = new Float32Array(count * 3);
+
+        for (let i = 0; i < count; i++) {
+            // Distribute on sphere surface
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const radius = 2.5 + (Math.random() - 0.5) * 1.5;
+
+            positions[i * 3]     = radius * Math.sin(phi) * Math.cos(theta);
+            positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+            positions[i * 3 + 2] = radius * Math.cos(phi);
+
+            // Purple to cyan gradient colors
+            const t = Math.random();
+            if (t < 0.5) {
+                // Purple
+                colors[i * 3]     = 0.66;
+                colors[i * 3 + 1] = 0.33;
+                colors[i * 3 + 2] = 0.97;
+            } else if (t < 0.8) {
+                // Cyan
+                colors[i * 3]     = 0.02;
+                colors[i * 3 + 1] = 0.71;
+                colors[i * 3 + 2] = 0.83;
+            } else {
+                // White dim
+                colors[i * 3]     = 0.4;
+                colors[i * 3 + 1] = 0.4;
+                colors[i * 3 + 2] = 0.5;
+            }
+        }
+
+        particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particlesGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const particlesMat = new THREE.PointsMaterial({
+            size: 0.022,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.75,
+            sizeAttenuation: true
+        });
+
+        const particles = new THREE.Points(particlesGeo, particlesMat);
+        scene.add(particles);
+
+        // ── Wireframe globe rings ──────────────────────────────
+        const ringMat = new THREE.LineBasicMaterial({
+            color: 0xa855f7,
+            transparent: true,
+            opacity: 0.08
+        });
+
+        for (let i = 0; i < 6; i++) {
+            const ringGeo = new THREE.RingGeometry(2.2 + i * 0.05, 2.22 + i * 0.05, 64);
+            const ring = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints(
+                    Array.from({ length: 65 }, (_, j) => {
+                        const a = (j / 64) * Math.PI * 2;
+                        return new THREE.Vector3(Math.cos(a) * (2.0 + i * 0.15), Math.sin(a) * (2.0 + i * 0.15), 0);
+                    })
+                ),
+                ringMat
+            );
+            ring.rotation.x = (i * Math.PI) / 6;
+            ring.rotation.y = (i * Math.PI) / 5;
+            scene.add(ring);
+        }
+
+        // ── Small floating dots in background ─────────────────
+        const bgGeo = new THREE.BufferGeometry();
+        const bgCount = 400;
+        const bgPos = new Float32Array(bgCount * 3);
+        for (let i = 0; i < bgCount; i++) {
+            bgPos[i * 3]     = (Math.random() - 0.5) * 20;
+            bgPos[i * 3 + 1] = (Math.random() - 0.5) * 20;
+            bgPos[i * 3 + 2] = (Math.random() - 0.5) * 10 - 3;
+        }
+        bgGeo.setAttribute('position', new THREE.BufferAttribute(bgPos, 3));
+        const bgMat = new THREE.PointsMaterial({
+            size: 0.015,
+            color: 0x4444aa,
+            transparent: true,
+            opacity: 0.4
+        });
+        scene.add(new THREE.Points(bgGeo, bgMat));
+
+        // ── Mouse parallax ────────────────────────────────────
+        let mouseX = 0, mouseY = 0;
+        document.addEventListener('mousemove', e => {
+            mouseX = (e.clientX / window.innerWidth - 0.5) * 0.4;
+            mouseY = (e.clientY / window.innerHeight - 0.5) * 0.4;
+        });
+
+        // ── Animation loop ────────────────────────────────────
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const t = clock.getElapsedTime();
+
+            // Slow rotation
+            particles.rotation.y = t * 0.04;
+            particles.rotation.x = t * 0.02;
+
+            // Mouse parallax on camera
+            camera.position.x += (mouseX - camera.position.x) * 0.03;
+            camera.position.y += (-mouseY - camera.position.y) * 0.03;
+            camera.lookAt(scene.position);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // ── Resize handler ────────────────────────────────────
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

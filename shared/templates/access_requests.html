@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+
+    <!-- Page Title -->
+    <div class="row mb-3">
+        <div class="col-sm-6">
+            <h3 class="m-0">Access Requests</h3>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-3">
+        <div class="col-lg-2 col-6">
+            <div class="small-box bg-info">
+                <div class="inner">
+                    <h3>{{ stats.total }}</h3>
+                    <p>Total</p>
+                </div>
+                <div class="icon"><i class="fas fa-list"></i></div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-6">
+            <div class="small-box bg-warning">
+                <div class="inner">
+                    <h3>{{ stats.pending }}</h3>
+                    <p>Pending</p>
+                </div>
+                <div class="icon"><i class="fas fa-clock"></i></div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-6">
+            <div class="small-box bg-success">
+                <div class="inner">
+                    <h3>{{ stats.approved }}</h3>
+                    <p>Approved</p>
+                </div>
+                <div class="icon"><i class="fas fa-check"></i></div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-6">
+            <div class="small-box bg-danger">
+                <div class="inner">
+                    <h3>{{ stats.rejected }}</h3>
+                    <p>Rejected</p>
+                </div>
+                <div class="icon"><i class="fas fa-times"></i></div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-6">
+            <div class="small-box bg-dark">
+                <div class="inner">
+                    <h3>{{ stats.revoked }}</h3>
+                    <p>Revoked</p>
+                </div>
+                <div class="icon"><i class="fas fa-ban"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search/Filter Bar -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="GET" action="/access/requests" class="form-inline">
+                <div class="form-group mr-3">
+                    <label class="mr-2">Filter by Status:</label>
+                    <select name="status" class="form-control">
+                        <option value="">All</option>
+                        <option value="Pending" {% if request.args.get('status') == 'Pending' %}selected{% endif %}>Pending</option>
+                        <option value="Manager Approved" {% if request.args.get('status') == 'Manager Approved' %}selected{% endif %}>Manager Approved</option>
+                        <option value="Approved" {% if request.args.get('status') == 'Approved' %}selected{% endif %}>Approved</option>
+                        <option value="Rejected" {% if request.args.get('status') == 'Rejected' %}selected{% endif %}>Rejected</option>
+                        <option value="Revoked" {% if request.args.get('status') == 'Revoked' %}selected{% endif %}>Revoked</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary mr-2">Filter</button>
+                <a href="/access/requests" class="btn btn-secondary">Reset</a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Access Requests List</h3>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered table-hover">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Request ID</th>
+                        <th>User</th>
+                        <th>Resource</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                        <th>Requested At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in requests %}
+                    <tr>
+                        <td>{{ r.request_id }}</td>
+                        <td>{{ r.user }}</td>
+                        <td>{{ r.resource }}</td>
+                        <td>{{ r.reason }}</td>
+                        <td>
+                            {% if r.status == 'Approved' %}
+                                <span class="badge badge-success">{{ r.status }}</span>
+                            {% elif r.status == 'Rejected' %}
+                                <span class="badge badge-danger">{{ r.status }}</span>
+                            {% elif r.status == 'Manager Approved' %}
+                                <span class="badge badge-info">{{ r.status }}</span>
+                            {% elif r.status == 'Revoked' %}
+                                <span class="badge badge-dark">{{ r.status }}</span>
+                            {% else %}
+                                <span class="badge badge-warning">{{ r.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ r.requested_at }}</td>
+                        <td>
+                            {% if r.status == 'Pending' or r.status == 'Manager Approved' %}
+                            <form method="POST" action="/access/approve/{{ r.request_id }}" style="display:inline;">
+                                <button type="submit" class="btn btn-success btn-sm">
+                                    <i class="fas fa-check"></i> Approve
+                                </button>
+                            </form>
+                            <form method="POST" action="/access/reject/{{ r.request_id }}" style="display:inline;">
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-times"></i> Reject
+                                </button>
+                            </form>
+
+                            {% elif r.status == 'Approved' %}
+                            <form method="POST" action="/access/revoke/{{ r.request_id }}" style="display:inline;">
+                                <button type="submit" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-ban"></i> Revoke
+                                </button>
+                            </form>
+
+                            {% elif r.status == 'Revoked' %}
+                            <span class="badge badge-dark mr-1">Revoked</span>
+                            <form method="POST" action="/access/approve/{{ r.request_id }}" style="display:inline;">
+                                <button type="submit" class="btn btn-success btn-sm">
+                                    <i class="fas fa-redo"></i> Re-Approve
+                                </button>
+                            </form>
+
+                            {% else %}
+                            <span class="text-muted">No action</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

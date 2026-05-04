@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .content-wrapper { background-color: #1a1a2e !important; }
+    .main-footer { background-color: #1a1a2e !important; color: #888 !important; border-top: 1px solid #2d2d4e !important; }
+
+    /* Three.js canvas fixed behind content */
+    #home-canvas {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    /* Make sure all content sits above canvas */
+    .container-fluid { position: relative; z-index: 2; }
+
+    .dash-card {
+        background: rgba(22, 33, 62, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 16px;
+        border: 1px solid rgba(45, 45, 78, 0.6) !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        color: white;
+    }
+    .dash-card .card-title { color: #aaa; font-size: 13px; font-weight: 500; }
+    .dash-card h3 { color: white; font-weight: 700; }
+
+    .gradient-purple { background: linear-gradient(135deg, #a855f7, #7c3aed); }
+    .gradient-cyan   { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+    .gradient-pink   { background: linear-gradient(135deg, #ec4899, #be185d); }
+    .gradient-green  { background: linear-gradient(135deg, #10b981, #047857); }
+    .gradient-orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .gradient-red    { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+
+    .stat-gradient-card {
+        border-radius: 16px;
+        border: none;
+        color: white;
+        padding: 20px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-gradient-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 35px rgba(0,0,0,0.4);
+    }
+    .stat-gradient-card p { font-size: 13px; opacity: 0.85; margin-bottom: 5px; }
+    .stat-gradient-card h2 { font-weight: 800; font-size: 2.2rem; margin: 0; }
+
+    table.dark-table { width: 100%; font-size: 12px; }
+    table.dark-table thead tr { background: #0f3460; color: #aaa; }
+    table.dark-table th { padding: 10px 12px; font-weight: 500; border: none; }
+    table.dark-table td { padding: 9px 12px; color: #ccc; border-bottom: 1px solid #2d2d4e; }
+    table.dark-table tbody tr:hover { background: #1e2a4a; }
+
+    .badge-dark-custom {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+    .scrollable { max-height: 250px; overflow-y: auto; }
+    .scrollable::-webkit-scrollbar { width: 4px; }
+    .scrollable::-webkit-scrollbar-thumb { background: #3d3d6e; border-radius: 4px; }
+</style>
+
+<!-- Three.js Canvas -->
+<canvas id="home-canvas"></canvas>
+
+<div class="container-fluid py-3 px-4">
+
+    <!-- Page Title -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <h4 style="color:white; font-weight:700;">
+                <i class="fas fa-shield-alt mr-2" style="color:#a855f7;"></i>
+                Enterprise Governance Dashboard
+            </h4>
+            <p style="color:#888; font-size:13px; margin:0;">Real-time monitoring and access governance</p>
+        </div>
+    </div>
+
+    <!-- Row 1: Gradient Stat Cards -->
+    <div class="row mb-3">
+        <div class="col-lg-2 col-6 mb-2">
+            <div class="stat-gradient-card gradient-purple">
+                <p><i class="fas fa-users mr-1"></i> Total Users</p>
+                <h2>{{ stats.total_users }}</h2>
+            </div>
+        </div>
+        <div class="col-lg-2 col-6 mb-2">
+            <div class="stat-gradient-card gradient-cyan">
+                <p><i class="fas fa-clipboard-list mr-1"></i> Audit Logs</p>
+                <h2>{{ stats.total_logs }}</h2>
+            </div>
+        </div>
+        <div class="col-lg-2 col-6 mb-2">
+            <div class="stat-gradient-card gradient-pink">
+                <p><i class="fas fa-flag mr-1"></i> Flagged</p>
+                <h2>{{ stats.flagged }}</h2>
+            </div>
+        </div>
+        <div class="col-lg-2 col-6 mb-2">
+            <div class="stat-gradient-card gradient-red">
+                <p><i class="fas fa-exclamation-triangle mr-1"></i> High Risk</p>
+                <h2>{{ stats.high_risk }}</h2>
+            </div>
+        </div>
+        <div class="col-lg-2 col-6 mb-2">
+            <div class="stat-gradient-card gradient-orange">
+                <p><i class="fas fa-clock mr-1"></i> Pending</p>
+                <h2>{{ stats.pending_requests }}</h2>
+            </div>
+        </div>
+        <div class="col-lg-2 col-6 mb-2">
+            <div class="stat-gradient-card gradient-green">
+                <p><i class="fas fa-user-slash mr-1"></i> Blocked</p>
+                <h2>{{ stats.blocked_users }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 2: Line Chart + Donut + Mini Stats -->
+    <div class="row mb-3">
+        <div class="col-lg-5 mb-3">
+            <div class="card dash-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <p class="card-title mb-0">Risk Score Trends</p>
+                            <small style="color:#666; font-size:11px;">Last 7 activities</small>
+                        </div>
+                        <span style="background:#2d2d4e; color:#a855f7; padding:4px 12px; border-radius:20px; font-size:11px;">Live</span>
+                    </div>
+                    <canvas id="lineChart" height="130"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-3">
+            <div class="card dash-card h-100">
+                <div class="card-body">
+                    <p class="card-title">Actions Breakdown</p>
+                    <canvas id="donutChart" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 mb-3">
+            <div class="card dash-card h-100">
+                <div class="card-body">
+                    <p class="card-title mb-3">Governance Stats</p>
+                    <div style="background:#0f3460; border-radius:10px; padding:12px; margin-bottom:10px;">
+                        <div class="d-flex justify-content-between">
+                            <span style="color:#aaa; font-size:12px;"><i class="fas fa-user-tag mr-1" style="color:#a855f7;"></i> Total Roles</span>
+                            <span style="color:white; font-weight:700;">{{ role_stats.total_roles }}</span>
+                        </div>
+                    </div>
+                    <div style="background:#0f3460; border-radius:10px; padding:12px; margin-bottom:10px;">
+                        <div class="d-flex justify-content-between">
+                            <span style="color:#aaa; font-size:12px;"><i class="fas fa-key mr-1" style="color:#06b6d4;"></i> Permissions</span>
+                            <span style="color:white; font-weight:700;">{{ role_stats.total_permissions }}</span>
+                        </div>
+                    </div>
+                    <div style="background:#0f3460; border-radius:10px; padding:12px; margin-bottom:10px;">
+                        <div class="d-flex justify-content-between">
+                            <span style="color:#aaa; font-size:12px;"><i class="fas fa-database mr-1" style="color:#10b981;"></i> Resources</span>
+                            <span style="color:white; font-weight:700;">{{ role_stats.total_resources }}</span>
+                        </div>
+                    </div>
+                    <hr style="border-color:#2d2d4e;">
+                    <p class="card-title mb-2">Sensitivity Levels</p>
+                    <p style="font-size:11px; color:#aaa;" class="mb-1">High Risk Resources</p>
+                    <div class="progress mb-2" style="background:#2d2d4e; border-radius:10px; height:6px;">
+                        <div class="progress-bar" style="width:70%; background:linear-gradient(90deg,#ef4444,#b91c1c); border-radius:10px;"></div>
+                    </div>
+                    <p style="font-size:11px; color:#aaa;" class="mb-1">Medium Risk Resources</p>
+                    <div class="progress mb-2" style="background:#2d2d4e; border-radius:10px; height:6px;">
+                        <div class="progress-bar" style="width:50%; background:linear-gradient(90deg,#f59e0b,#d97706); border-radius:10px;"></div>
+                    </div>
+                    <p style="font-size:11px; color:#aaa;" class="mb-1">Low Risk Resources</p>
+                    <div class="progress" style="background:#2d2d4e; border-radius:10px; height:6px;">
+                        <div class="progress-bar" style="width:30%; background:linear-gradient(90deg,#10b981,#047857); border-radius:10px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 3: Users Table + Permissions Table -->
+    <div class="row mb-3">
+        <div class="col-lg-6 mb-3">
+            <div class="card dash-card h-100">
+                <div class="card-body p-0">
+                    <div class="p-3">
+                        <p class="card-title mb-0"><i class="fas fa-users mr-1" style="color:#a855f7;"></i> Users & Roles</p>
+                    </div>
+                    <div class="scrollable">
+                        <table class="dark-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:30%;">User</th>
+                                    <th style="width:25%;">Role</th>
+                                    <th style="width:25%;">Department</th>
+                                    <th style="width:20%;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in user_roles %}
+                                <tr>
+                                    <td><strong style="color:white;">{{ u.full_name }}</strong></td>
+                                    <td><span class="badge-dark-custom" style="background:#1e3a5f; color:#06b6d4;">{{ u.role_name }}</span></td>
+                                    <td style="font-size:11px; color:#888;">{{ u.dept_name }}</td>
+                                    <td>
+                                        {% if u.status == 'Blocked' %}
+                                            <span class="badge-dark-custom" style="background:#3b0d0d; color:#ef4444;">Blocked</span>
+                                        {% else %}
+                                            <span class="badge-dark-custom" style="background:#0d3b2e; color:#10b981;">Active</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-3">
+            <div class="card dash-card h-100">
+                <div class="card-body p-0">
+                    <div class="p-3">
+                        <p class="card-title mb-0"><i class="fas fa-key mr-1" style="color:#06b6d4;"></i> Role Permissions</p>
+                    </div>
+                    <div class="scrollable">
+                        <table class="dark-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:25%;">Role</th>
+                                    <th style="width:20%;">Action</th>
+                                    <th style="width:30%;">Resource</th>
+                                    <th style="width:25%;">Sensitivity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in role_permissions %}
+                                <tr>
+                                    <td><span class="badge-dark-custom" style="background:#2d1b6e; color:#a855f7;">{{ p.role_name }}</span></td>
+                                    <td>
+                                        {% if p.action == 'DELETE' %}
+                                            <span class="badge-dark-custom" style="background:#3b0d0d; color:#ef4444;">{{ p.action }}</span>
+                                        {% elif p.action == 'WRITE' %}
+                                            <span class="badge-dark-custom" style="background:#3b2800; color:#f59e0b;">{{ p.action }}</span>
+                                        {% elif p.action == 'UPDATE' %}
+                                            <span class="badge-dark-custom" style="background:#1e3a5f; color:#06b6d4;">{{ p.action }}</span>
+                                        {% else %}
+                                            <span class="badge-dark-custom" style="background:#0d3b2e; color:#10b981;">{{ p.action }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-size:11px; color:#ccc;">{{ p.resource_name }}</td>
+                                    <td>
+                                        {% if p.sensitivity_level == 'High' %}
+                                            <span class="badge-dark-custom" style="background:#3b0d0d; color:#ef4444;">High</span>
+                                        {% elif p.sensitivity_level == 'Medium' %}
+                                            <span class="badge-dark-custom" style="background:#3b2800; color:#f59e0b;">Medium</span>
+                                        {% else %}
+                                            <span class="badge-dark-custom" style="background:#0d3b2e; color:#10b981;">Low</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 4: Bar Chart + Recent Activities -->
+    <div class="row mb-3">
+        <div class="col-lg-4 mb-3">
+            <div class="card dash-card h-100">
+                <div class="card-body">
+                    <p class="card-title">Activity by Action Type</p>
+                    <canvas id="barChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8 mb-3">
+            <div class="card dash-card h-100">
+                <div class="card-body p-0">
+                    <div class="p-3">
+                        <p class="card-title mb-0"><i class="fas fa-history mr-1" style="color:#ec4899;"></i> Recent Activities</p>
+                    </div>
+                    <div class="scrollable">
+                        <table class="dark-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:18%;">User</th>
+                                    <th style="width:20%;">Resource</th>
+                                    <th style="width:15%;">Action</th>
+                                    <th style="width:15%;">Risk Score</th>
+                                    <th style="width:12%;">Flagged</th>
+                                    <th style="width:20%;">Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for a in recent %}
+                                <tr>
+                                    <td><strong style="color:white;">{{ a.user }}</strong></td>
+                                    <td style="font-size:11px;">{{ a.resource }}</td>
+                                    <td>
+                                        {% if a.action == 'DELETE' %}
+                                            <span class="badge-dark-custom" style="background:#3b0d0d; color:#ef4444;">{{ a.action }}</span>
+                                        {% elif a.action == 'EXPORT' %}
+                                            <span class="badge-dark-custom" style="background:#3b2800; color:#f59e0b;">{{ a.action }}</span>
+                                        {% elif a.action == 'WRITE' %}
+                                            <span class="badge-dark-custom" style="background:#1e3a5f; color:#06b6d4;">{{ a.action }}</span>
+                                        {% else %}
+                                            <span class="badge-dark-custom" style="background:#0d3b2e; color:#10b981;">{{ a.action }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if a.risk_score >= 70 %}
+                                            <span class="badge-dark-custom" style="background:#3b0d0d; color:#ef4444;">{{ a.risk_score }}</span>
+                                        {% elif a.risk_score >= 40 %}
+                                            <span class="badge-dark-custom" style="background:#3b2800; color:#f59e0b;">{{ a.risk_score }}</span>
+                                        {% else %}
+                                            <span class="badge-dark-custom" style="background:#0d3b2e; color:#10b981;">{{ a.risk_score }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if a.is_flagged %}
+                                            <span class="badge-dark-custom" style="background:#3b0d0d; color:#ef4444;"><i class="fas fa-flag mr-1"></i>Yes</span>
+                                        {% else %}
+                                            <span class="badge-dark-custom" style="background:#0d3b2e; color:#10b981;">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="color:#666; font-size:11px;">{{ a.timestamp }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="{{ url_for('static', filename='AdminLTE/plugins/chart.js/Chart.min.js') }}"></script>
+
+<!-- Three.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+    // ── Chart.js Charts ───────────────────────────────────────
+    Chart.defaults.global.defaultFontColor = '#888';
+
+    var lineCtx = document.getElementById('lineChart').getContext('2d');
+    var gradient = lineCtx.createLinearGradient(0, 0, 0, 200);
+    gradient.addColorStop(0, 'rgba(168, 85, 247, 0.4)');
+    gradient.addColorStop(1, 'rgba(168, 85, 247, 0.0)');
+    new Chart(lineCtx, {
+        type: 'line',
+        data: {
+            labels: {{ bar_labels | tojson }},
+            datasets: [{
+                label: 'Risk Score',
+                data: {{ bar_scores | tojson }},
+                borderColor: '#a855f7',
+                backgroundColor: gradient,
+                borderWidth: 2,
+                pointBackgroundColor: '#a855f7',
+                pointRadius: 4,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            legend: { display: false },
+            scales: {
+                yAxes: [{ ticks: { beginAtZero: true, max: 100, fontColor: '#555' }, gridLines: { color: '#2d2d4e' } }],
+                xAxes: [{ ticks: { fontColor: '#555', fontSize: 10 }, gridLines: { display: false } }]
+            }
+        }
+    });
+
+    var donutCtx = document.getElementById('donutChart').getContext('2d');
+    new Chart(donutCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ action_labels | tojson }},
+            datasets: [{
+                data: {{ action_counts | tojson }},
+                backgroundColor: ['#a855f7', '#06b6d4', '#ef4444', '#f59e0b', '#10b981'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            cutoutPercentage: 65,
+            legend: { position: 'bottom', labels: { fontSize: 11, fontColor: '#888', boxWidth: 12 } }
+        }
+    });
+
+    var barCtx = document.getElementById('barChart').getContext('2d');
+    new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ action_labels | tojson }},
+            datasets: [{
+                label: 'Count',
+                data: {{ action_counts | tojson }},
+                backgroundColor: ['#a855f7', '#06b6d4', '#ef4444', '#f59e0b', '#10b981'],
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true,
+            legend: { display: false },
+            scales: {
+                yAxes: [{ ticks: { beginAtZero: true, fontColor: '#555' }, gridLines: { color: '#2d2d4e' } }],
+                xAxes: [{ ticks: { fontColor: '#555' }, gridLines: { display: false } }]
+            }
+        }
+    });
+
+    // ── Three.js Floating Particles Background ────────────────
+    const canvas = document.getElementById('home-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.z = 4;
+
+    // ── Particle system ───────────────────────────────────────
+    const count = 2500;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
+    const vel = new Float32Array(count * 3); // velocity for each particle
+
+    for (let i = 0; i < count; i++) {
+        pos[i * 3]     = (Math.random() - 0.5) * 18;
+        pos[i * 3 + 1] = (Math.random() - 0.5) * 12;
+        pos[i * 3 + 2] = (Math.random() - 0.5) * 8 - 2;
+
+        // Very slow upward drift velocity
+        vel[i * 3]     = (Math.random() - 0.5) * 0.0008;
+        vel[i * 3 + 1] = Math.random() * 0.0006 + 0.0002;
+        vel[i * 3 + 2] = (Math.random() - 0.5) * 0.0003;
+
+        // Color: mostly dim purple/blue, some cyan
+        const r = Math.random();
+        if (r < 0.5) {
+            col[i * 3] = 0.42; col[i * 3 + 1] = 0.2; col[i * 3 + 2] = 0.6;
+        } else if (r < 0.75) {
+            col[i * 3] = 0.1; col[i * 3 + 1] = 0.45; col[i * 3 + 2] = 0.55;
+        } else {
+            col[i * 3] = 0.15; col[i * 3 + 1] = 0.15; col[i * 3 + 2] = 0.3;
+        }
+    }
+
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color',    new THREE.BufferAttribute(col, 3));
+
+    const mat = new THREE.PointsMaterial({
+        size: 0.018,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.55,
+        sizeAttenuation: true
+    });
+
+    const particles = new THREE.Points(geo, mat);
+    scene.add(particles);
+
+    // ── Subtle connection lines (static) ─────────────────────
+    const lineMat = new THREE.LineBasicMaterial({
+        color: 0x2d2d6e,
+        transparent: true,
+        opacity: 0.12
+    });
+
+    for (let i = 0; i < 18; i++) {
+        const points = [
+            new THREE.Vector3((Math.random() - 0.5) * 16, (Math.random() - 0.5) * 10, -2),
+            new THREE.Vector3((Math.random() - 0.5) * 16, (Math.random() - 0.5) * 10, -2)
+        ];
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+        scene.add(new THREE.Line(lineGeo, lineMat));
+    }
+
+    // ── Animation loop ────────────────────────────────────────
+    const posAttr = geo.getAttribute('position');
+
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Move each particle upward slowly, reset when off screen
+        for (let i = 0; i < count; i++) {
+            posAttr.array[i * 3]     += vel[i * 3];
+            posAttr.array[i * 3 + 1] += vel[i * 3 + 1];
+            posAttr.array[i * 3 + 2] += vel[i * 3 + 2];
+
+            // Reset particle to bottom when it drifts off top
+            if (posAttr.array[i * 3 + 1] > 7) {
+                posAttr.array[i * 3 + 1] = -7;
+                posAttr.array[i * 3]     = (Math.random() - 0.5) * 18;
+            }
+        }
+        posAttr.needsUpdate = true;
+
+        // Very slow scene rotation
+        particles.rotation.y += 0.00015;
+        particles.rotation.x += 0.00008;
+
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // ── Resize ────────────────────────────────────────────────
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+{% endblock %}

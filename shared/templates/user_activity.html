@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .badge-dark-custom {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+</style>
+
+<div class="container-fluid py-3">
+
+    <!-- Page Title -->
+    <div class="row mb-3">
+        <div class="col-sm-6">
+            <h4 style="color:white; font-weight:700;">
+                <i class="fas fa-user-clock mr-2" style="color:#f59e0b;"></i>
+                User Activity Monitor
+            </h4>
+            <p style="color:#888; font-size:13px;">Track and monitor all user activities in real-time</p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-3">
+        <div class="col-lg-3 col-6 mb-2">
+            <div style="background: linear-gradient(135deg, #06b6d4, #0891b2); border-radius:16px; padding:20px; color:white; box-shadow:0 8px 25px rgba(0,0,0,0.3);">
+                <p style="font-size:13px; opacity:0.85; margin-bottom:5px; color:white;">
+                    <i class="fas fa-chart-line mr-1"></i> Total Activities
+                </p>
+                <h2 style="font-weight:800; font-size:2.2rem; margin:0; color:white;">{{ stats.total }}</h2>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6 mb-2">
+            <div style="background: linear-gradient(135deg, #f59e0b, #d97706); border-radius:16px; padding:20px; color:white; box-shadow:0 8px 25px rgba(0,0,0,0.3);">
+                <p style="font-size:13px; opacity:0.85; margin-bottom:5px; color:white;">
+                    <i class="fas fa-flag mr-1"></i> Flagged Activities
+                </p>
+                <h2 style="font-weight:800; font-size:2.2rem; margin:0; color:white;">{{ stats.flagged }}</h2>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6 mb-2">
+            <div style="background: linear-gradient(135deg, #ef4444, #b91c1c); border-radius:16px; padding:20px; color:white; box-shadow:0 8px 25px rgba(0,0,0,0.3);">
+                <p style="font-size:13px; opacity:0.85; margin-bottom:5px; color:white;">
+                    <i class="fas fa-exclamation-triangle mr-1"></i> High Risk
+                </p>
+                <h2 style="font-weight:800; font-size:2.2rem; margin:0; color:white;">{{ stats.high_risk }}</h2>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6 mb-2">
+            <div style="background: linear-gradient(135deg, #a855f7, #7c3aed); border-radius:16px; padding:20px; color:white; box-shadow:0 8px 25px rgba(0,0,0,0.3);">
+                <p style="font-size:13px; opacity:0.85; margin-bottom:5px; color:white;">
+                    <i class="fas fa-user-slash mr-1"></i> Blocked Users
+                </p>
+                <h2 style="font-weight:800; font-size:2.2rem; margin:0; color:white;">{{ stats.blocked_users }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card mb-3" style="background:#16213e; border-radius:16px;">
+        <div class="card-body">
+            <form method="GET" action="/activity/" class="form-inline">
+                <div class="form-group mr-3">
+                    <label class="mr-2" style="color:#aaa;">Filter by Status:</label>
+                    <select name="status" class="form-control" style="background:#0f3460; border-color:#2d2d4e; color:#ccc; border-radius:10px;">
+                        <option value="">All</option>
+                        <option value="flagged" {% if request.args.get('status') == 'flagged' %}selected{% endif %}>Flagged Only</option>
+                    </select>
+                </div>
+                <div class="form-group mr-3">
+                    <label class="mr-2" style="color:#aaa;">Filter by Action:</label>
+                    <select name="action" class="form-control" style="background:#0f3460; border-color:#2d2d4e; color:#ccc; border-radius:10px;">
+                        <option value="">All</option>
+                        <option value="READ">READ</option>
+                        <option value="WRITE">WRITE</option>
+                        <option value="DELETE">DELETE</option>
+                        <option value="UPDATE">UPDATE</option>
+                        <option value="EXPORT">EXPORT</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-sm mr-2" style="background:linear-gradient(135deg,#a855f7,#7c3aed); color:white; border:none; border-radius:10px; padding:8px 20px;">
+                    <i class="fas fa-filter mr-1"></i> Filter
+                </button>
+                <a href="/activity/" class="btn btn-sm" style="background:#2d2d4e; color:#ccc; border:none; border-radius:10px; padding:8px 20px;">
+                    <i class="fas fa-redo mr-1"></i> Reset
+                </a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Activity Table -->
+    <div class="card" style="background:#16213e; border-radius:16px;">
+        <div class="card-header" style="background:#0f3460; border-radius:16px 16px 0 0; border-bottom:1px solid #2d2d4e;">
+            <h6 style="color:#aaa; margin:0; font-weight:500;">
+                <i class="fas fa-history mr-2" style="color:#f59e0b;"></i>User Activities
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                    <thead>
+                        <tr style="background:#0f3460;">
+                            <th style="padding:12px 15px; color:#aaa; font-weight:500; border-bottom:1px solid #2d2d4e;">ID</th>
+                            <th style="padding:12px 15px; color:#aaa; font-weight:500; border-bottom:1px solid #2d2d4e;">User</th>
+                            <th style="padding:12px 15px; color:#aaa; font-weight:500; border-bottom:1px solid #2d2d4e;">Resource</th>
+                            <th style="padding:12px 15px; color:#aaa; font-weight:500; border-bottom:1px solid #2d2d4e;">Action</th>
+                            <th style="padding:12px 15px; color:#aaa; font-weight:500; border-bottom:1px solid #2d2d4e;">Risk Score</th>
+                            <th style="padding:12px 15px; color:#aaa; font-weight:500; border-bottom:1px solid #2d2d4e;">Flagged</th>
+                            <th style="padding:12px 15px; color:#aaa; font-weight:500; border-bottom:1px solid #2d2d4e;">Timestamp</th>
+                            <th style="padding:12px 15px; color:#aaa; font-weight:500; border-bottom:1px solid #2d2d4e;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in activities %}
+                        <tr style="border-bottom:1px solid #2d2d4e;
+                            {% if a.is_blocked %}background:#1a0a2e;
+                            {% elif a.is_flagged %}background:#1e0f0f;
+                            {% else %}background:#16213e;{% endif %}">
+
+                            <td style="padding:12px 15px; color:#888;">{{ a.activity_id }}</td>
+
+                            <td style="padding:12px 15px;">
+                                <strong style="color:white;">{{ a.user }}</strong>
+                                {% if a.is_blocked %}
+                                    <br><span class="badge-dark-custom" style="background:#2d1b6e; color:#a855f7; margin-top:3px; display:inline-block;">Blocked</span>
+                                {% endif %}
+                            </td>
+
+                            <td style="padding:12px 15px; color:#ccc;">{{ a.resource }}</td>
+
+                            <td style="padding:12px 15px;">
+                                {% if a.action == 'DELETE' %}
+                                    <span class="badge-dark-custom" style="background:#3b0d0d; color:#ef4444;">{{ a.action }}</span>
+                                {% elif a.action == 'EXPORT' %}
+                                    <span class="badge-dark-custom" style="background:#3b2800; color:#f59e0b;">{{ a.action }}</span>
+                                {% elif a.action == 'WRITE' %}
+                                    <span class="badge-dark-custom" style="background:#1e3a5f; color:#06b6d4;">{{ a.action }}</span>
+                                {% elif a.action == 'UPDATE' %}
+                                    <span class="badge-dark-custom" style="background:#1a2e1a; color:#10b981;">{{ a.action }}</span>
+                                {% else %}
+                                    <span class="badge-dark-custom" style="background:#0d3b2e; color:#10b981;">{{ a.action }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td style="padding:12px 15px;">
+                                {% if a.risk_score >= 70 %}
+                                    <span class="badge-dark-custom" style="background:#3b0d0d; color:#ef4444;">{{ a.risk_score }}</span>
+                                {% elif a.risk_score >= 40 %}
+                                    <span class="badge-dark-custom" style="background:#3b2800; color:#f59e0b;">{{ a.risk_score }}</span>
+                                {% else %}
+                                    <span class="badge-dark-custom" style="background:#0d3b2e; color:#10b981;">{{ a.risk_score }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td style="padding:12px 15px;">
+                                {% if a.is_flagged %}
+                                    <span class="badge-dark-custom" style="background:#3b0d0d; color:#ef4444;">
+                                        <i class="fas fa-flag mr-1"></i>Yes
+                                    </span>
+                                {% else %}
+                                    <span class="badge-dark-custom" style="background:#0d3b2e; color:#10b981;">No</span>
+                                {% endif %}
+                            </td>
+
+                            <td style="padding:12px 15px; color:#666; font-size:11px;">{{ a.timestamp }}</td>
+
+                            <td style="padding:12px 15px;">
+                                {% if not a.is_blocked %}
+                                <form method="POST" action="/activity/block/{{ a.user_id }}" style="display:inline;">
+                                    <div style="display:flex; gap:5px; align-items:center;">
+                                        <input type="text" name="reason" placeholder="Reason..."
+                                            style="background:#0f3460; border:1px solid #2d2d4e; color:#ccc; padding:5px 10px; border-radius:8px; font-size:11px; width:130px;">
+                                        <button type="submit"
+                                            style="background:linear-gradient(135deg,#ef4444,#b91c1c); color:white; border:none; border-radius:8px; padding:5px 10px; font-size:11px; cursor:pointer;">
+                                            <i class="fas fa-user-slash mr-1"></i>Block
+                                        </button>
+                                    </div>
+                                </form>
+                                {% else %}
+                                <form method="POST" action="/activity/unblock/{{ a.user_id }}" style="display:inline;">
+                                    <button type="submit"
+                                        style="background:linear-gradient(135deg,#10b981,#047857); color:white; border:none; border-radius:8px; padding:6px 14px; font-size:11px; cursor:pointer;">
+                                        <i class="fas fa-user-check mr-1"></i>Unblock
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
